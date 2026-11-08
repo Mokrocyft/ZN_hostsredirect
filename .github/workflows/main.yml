@@ -1,0 +1,58 @@
+name: Build ZN-hostsredirect
+
+on:
+  push:
+    branches: [ "master", "main" ]
+    paths-ignore: [ "**.md" ]
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    env:
+      GRADLE_OPTS: "--enable-native-access=ALL-UNNAMED"
+    steps:
+      - uses: actions/checkout@main
+
+      - uses: actions/setup-java@main
+        with:
+          distribution: temurin
+          java-version: 28-ea
+          cache: gradle
+
+      - name: Install Clang 23, CMake 4.5.0-rc3 & NDK r30
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm.sh | sudo bash -s -- 23 >/dev/null 2>&1
+          sudo apt-get install -y --no-install-recommends clang-23 lld-23 >/dev/null
+
+          mkdir -p "$HOME/cmake"
+          curl -fsSL https://github.com/Kitware/CMake/releases/download/v4.5.0-rc3/cmake-4.5.0-rc3-linux-x86_64.tar.gz \
+            | tar -xz -C "$HOME/cmake" --strip-components=1
+          echo "$HOME/cmake/bin" >> "$GITHUB_PATH"
+
+          curl -fsSL https://dl.google.com/android/repository/android-ndk-r30-linux.zip -o /tmp/ndk.zip
+          unzip -q /tmp/ndk.zip -d "$HOME"
+          rm -f /tmp/ndk.zip
+          echo "ANDROID_NDK_HOME=$HOME/android-ndk-r30" >> "$GITHUB_ENV"
+
+      - name: Build Module ZIP
+        run: |
+          chmod +x gradlew
+          ./gradlew zipRelease --no-daemon
+
+      - uses: actions/upload-artifact@main
+        with:
+          name: ZN-hostsredirect-v4.1
+          path: release/*.zip
+          if-no-files-found: error
+          compression-level: 9

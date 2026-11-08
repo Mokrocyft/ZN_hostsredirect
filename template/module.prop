@@ -1,0 +1,6 @@
+id=hostsredirect
+name=ZN-HostsRedirect
+version=v4.1
+versionCode=410
+author=aviraxp
+description=Lightweight C26/C2y Zygisk Next netd hosts redirect module for bindhosts (Mode 4) on Android 15+ (arm64-v8a).
